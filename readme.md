@@ -41,13 +41,6 @@ Search images using **natural language** powered by **Hybrid AI** — combining 
 Homepage
 ![](demo_images/homepage.png)
 
-Search Results
-![](demo_images/search_results.png)
-
-Server Snippet
-![](demo_images/liveserver.png)
-
-
 ---
 
 ## 🛠 Tech Stack
