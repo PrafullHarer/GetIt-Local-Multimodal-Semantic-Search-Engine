@@ -1,0 +1,11 @@
+torch
+torchvision
+transformers
+pillow
+numpy
+matplotlib
+tqdm
+fastapi
+uvicorn[standard]
+python-multipart
+aiofiles    

@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GetIt — Local Multimodal Semantic Search Engine</title>
+    <meta name="description"
+        content="Privacy-first, offline semantic image search powered by BLIP + CLIP neural networks. Search your local images using natural language.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root,
+        html.dark {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-card: #0b0b0b;
+
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.4);
+
+            --border-color: rgba(255, 255, 255, 0.1);
+            --border-hover: rgba(255, 255, 255, 0.3);
+
+            --ink-black: #000000;
+            --charcoal: #1a1a1a;
+            --dark-gray: #333333;
+            --medium-gray: #666666;
+            --light-gray: #999999;
+            --silver: #cccccc;
+            --off-white: #e5e5e5;
+            --pure-white: #ffffff;
+
+            --accent: var(--pure-white);
+            --accent-light: var(--silver);
+
+            --n-bg: #0b0b0b;
+            --n-text: #ffffff;
+            --n-border: #ffffff;
+            --n-shadow-bg: #222222;
+            --n-shadow-border: rgba(255, 255, 255, 0.5);
+            --n-btn-shadow-bg: #444444;
+
+            --success: #ffffff;
+            --error: #ffffff;
+
+            --font-heading: "Space Grotesk", sans-serif;
+            --font-body: "Inter", sans-serif;
+            --font-mono: "JetBrains Mono", monospace;
+        }
+
+        html.light {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+
+            --text-primary: #000000;
+            --text-secondary: rgba(0, 0, 0, 0.6);
+            --text-muted: rgba(0, 0, 0, 0.4);
+
+            --border-color: rgba(0, 0, 0, 0.1);
+            --border-hover: rgba(0, 0, 0, 0.3);
+
+            --ink-black: #ffffff;
+            --charcoal: #f0f0f0;
+            --dark-gray: #e0e0e0;
+            --medium-gray: #999999;
+            --light-gray: #666666;
+            --silver: #cccccc;
+            --off-white: #e5e5e5;
+            --pure-white: #000000;
+
+            --accent: #000000;
+            --accent-light: #333333;
+
+            --n-bg: #ffffff;
+            --n-text: #000000;
+            --n-border: #000000;
+            --n-shadow-bg: #e5e5e5;
+            --n-shadow-border: rgba(0, 0, 0, 0.5);
+            --n-btn-shadow-bg: #cccccc;
+
+            --success: #000000;
+            --error: #000000;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 103.5%;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: var(--font-heading);
+        }
+
+        /* Noise overlay - matches portfolio */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 1000;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        /* Theme toggle — neo-brutalist icon wrapper matching portfolio */
+        .theme-toggle-wrapper {
+            position: relative;
+            display: inline-block;
+            width: fit-content;
+            z-index: 1;
+        }
+
+        .theme-toggle {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            background: var(--n-bg);
+            border: 2px solid var(--n-border);
+            color: var(--n-text);
+            z-index: 2;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+
+        .theme-toggle-shadow {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--n-shadow-border);
+            background: var(--n-shadow-bg);
+            z-index: 1;
+            transition: transform 0.2s ease;
+        }
+
+        .theme-toggle-wrapper:hover .theme-toggle {
+            transform: translate(-3px, -3px);
+            background: var(--n-text);
+            color: var(--n-bg);
+        }
+
+        .theme-toggle-wrapper:hover .theme-toggle-shadow {
+            transform: translate(1.5px, 1.5px);
+        }
+
+        /* Smooth transition for theme switch */
+        body,
+        header,
+        .search-container,
+        .search-btn,
+        .n-card,
+        .n-shadow,
+        .n-btn,
+        .n-btn-shadow,
+        .modal-box,
+        .stats-card,
+        .toast,
+        .filter-input,
+        .feature-pill,
+        .empty-icon,
+        .upload-zone,
+        .health-stats {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        /* Scrollbar - matches portfolio */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #666666 rgba(255, 255, 255, 0.06);
+        }
+
+        *::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background: #666;
+            border-radius: 999px;
+            border: 2px solid rgba(0, 0, 0, 0.6);
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        /* ===== LAYOUT ===== */
+        .app {
+            position: relative;
+            z-index: 2;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 max(1rem, env(safe-area-inset-left));
+        }
+
+        /* ===== HEADER / NAV ===== */
+        header {
+            position: fixed;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            width: calc(100% - 2rem);
+            max-width: 1400px;
+        }
+
+        .nav-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        /* Offset shadow — exact portfolio style */
+        .nav-shadow {
+            position: absolute;
+            inset: 0;
+            transform: translate(6px, 6px);
+            border: 2px solid var(--n-border);
+            background: var(--n-shadow-bg);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .header-inner {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 40px;
+            min-height: 64px;
+            border: 2px solid var(--n-border);
+            background: var(--n-bg);
+            z-index: 10;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: var(--n-text);
+            transition: opacity 0.2s ease;
+        }
+
+        .logo:hover {
+            opacity: 0.8;
+        }
+
+        .logo-text {
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+        }
+
+        /* Desktop nav links */
+        .nav-center {
+            display: flex;
+            align-items: center;
+            gap: 36px;
+        }
+
+        .nav-link {
+            color: var(--n-text);
+            opacity: 0.5;
+            text-decoration: none;
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 6px 0;
+            transition: opacity 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            opacity: 1;
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--n-text);
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Theme toggle — simple icon, no border */
+        .theme-toggle-simple {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: var(--n-text);
+            opacity: 0.5;
+            cursor: pointer;
+            padding: 8px;
+            transition: opacity 0.3s ease;
+        }
+
+        .theme-toggle-simple:hover {
+            opacity: 1;
+        }
+
+        .theme-toggle-simple svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* BUILD INDEX button — n-btn style matching RESUME */
+        .nav-cta-wrap {
+            position: relative;
+            display: inline-block;
+        }
+
+        .nav-cta {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--n-bg);
+            border: 2px solid var(--n-border);
+            color: var(--n-text);
+            padding: 10px 28px;
+            font-family: var(--font-mono);
+            font-weight: 900;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            z-index: 2;
+        }
+
+        .nav-cta:hover {
+            transform: translate(-2px, -2px);
+        }
+
+        .nav-cta-shadow {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--n-shadow-border);
+            background: var(--n-btn-shadow-bg);
+            z-index: 1;
+        }
+
+        /* Offset hero to account for fixed navbar */
+        .app {
+            padding-top: 80px;
+        }
+
+        /* Neo-brutalist button - matches portfolio .n-btn */
+        .n-btn-container {
+            position: relative;
+            display: inline-block;
+            width: fit-content;
+            z-index: 1;
+        }
+
+        .n-btn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--n-bg);
+            border: 2px solid var(--n-border);
+            color: var(--n-text);
+            padding: 0.6rem 1.2rem;
+            font-family: var(--font-heading);
+            font-weight: 800;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            z-index: 2;
+        }
+
+        .n-btn-shadow {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--n-border);
+            background: var(--n-btn-shadow-bg);
+            z-index: 1;
+            transition: transform 0.2s ease;
+        }
+
+        .n-btn-container:hover .n-btn {
+            transform: translate(-3px, -3px);
+        }
+
+        .n-btn-container:hover .n-btn-shadow {
+            transform: translate(1.5px, 1.5px);
+        }
+
+        /* ===== HERO ===== */
+        .hero {
+            padding: 100px 0 60px;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            border: 2px solid var(--border-color);
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 36px;
+            animation: fadeInUp 0.6s ease both;
+        }
+
+        .hero-badge-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-primary);
+            box-shadow: 0 0 8px var(--border-hover);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 9vw, 6rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            animation: fadeInUp 0.6s ease 0.1s both;
+        }
+
+        .hero h1 .line-2 {
+            display: block;
+            color: var(--text-muted);
+            font-weight: 300;
+            font-size: 0.5em;
+            letter-spacing: 0;
+            text-transform: none;
+            font-style: italic;
+        }
+
+        .hero-sub {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            max-width: 480px;
+            margin: 0 auto 48px;
+            line-height: 1.7;
+            animation: fadeInUp 0.6s ease 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== SEARCH ===== */
+        .search-wrapper {
+            max-width: 700px;
+            margin: 0 auto 16px;
+            animation: fadeInUp 0.6s ease 0.3s both;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: stretch;
+            border: 2px solid var(--border-color);
+            transition: border-color 0.2s ease;
+            background: var(--bg-secondary);
+        }
+
+        .search-container:focus-within {
+            border-color: var(--border-hover);
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 18px 24px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-btn-wrap {
+            position: relative;
+            display: flex;
+            flex-shrink: 0;
+        }
+
+        .search-btn {
+            padding: 18px 32px;
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            border: none;
+            border-left: 2px solid var(--border-color);
+            font-family: var(--font-heading);
+            font-size: 0.82rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-btn:hover {
+            opacity: 0.85;
+        }
+
+        .search-btn:active {
+            opacity: 0.7;
+        }
+
+        /* Filters */
+        .filters-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 0;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin: 12px auto 0;
+            animation: fadeInUp 0.6s ease 0.35s both;
+        }
+
+        .filters-toggle:hover {
+            color: var(--text-secondary);
+        }
+
+        .filters-panel {
+            max-width: 700px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .filters-panel.active {
+            max-height: 200px;
+            opacity: 1;
+            margin-top: 12px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-label {
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .filter-input {
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            transition: border-color 0.2s;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--border-hover);
+        }
+
+        /* ===== FEATURE PILLS ===== */
+        .features {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 48px auto 0;
+            flex-wrap: wrap;
+            max-width: 700px;
+            animation: fadeInUp 0.6s ease 0.4s both;
+        }
+
+        .feature-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border: 2px solid var(--border-color);
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s ease;
+        }
+
+        .feature-pill:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0px var(--n-shadow-bg);
+        }
+
+        .feature-pill .icon {
+            font-size: 0.9rem;
+        }
+
+        /* ===== STATS BAR ===== */
+        .stats-bar {
+            display: none;
+            justify-content: center;
+            gap: 48px;
+            padding: 20px 0;
+            margin: 32px 0;
+            border-top: 2px solid var(--border-color);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .stats-bar.visible {
+            display: flex;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* ===== LOADING ===== */
+        .loading-state {
+            display: none;
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .loader {
+            width: 44px;
+            height: 44px;
+            margin: 0 auto 24px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--pure-white);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-state p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .empty-state p {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+        }
+
+        /* ===== RESULTS GRID ===== */
+        .results-grid {
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+            padding-bottom: 80px;
+        }
+
+        .results-grid.visible {
+            display: grid;
+        }
+
+        /* Neo-brutalist card — matches portfolio .n-card */
+        .n-card-container {
+            position: relative;
+            display: block;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        .n-card {
+            position: relative;
+            background: var(--n-bg);
+            border: 2px solid var(--n-border);
+            color: var(--n-text);
+            z-index: 2;
+            transition: transform 0.2s ease;
+            height: 100%;
+        }
+
+        .n-shadow {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--n-shadow-border);
+            background: var(--n-shadow-bg);
+            z-index: 1;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .n-card-container:hover .n-card {
+            transform: translate(-4px, -4px);
+        }
+
+        .n-card-container:hover .n-shadow {
+            transform: translate(2px, 2px);
+            opacity: 1;
+        }
+
+        .n-card-container:hover .card-image {
+            transform: scale(1.05);
+        }
+
+        .card-image-wrapper {
+            overflow: hidden;
+            aspect-ratio: 4/3;
+            position: relative;
+            border-bottom: 2px solid var(--n-border);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: var(--charcoal);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-body {
+            padding: 18px;
+        }
+
+        .card-caption {
+            font-family: var(--font-heading);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 14px;
+        }
+
+        .keyword-tag {
+            padding: 4px 10px;
+            border: 1px solid var(--border-color);
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card-scores {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-label {
+            font-family: var(--font-mono);
+            font-size: 0.55rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .score-value {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            font-size: 0.82rem;
+            color: var(--pure-white);
+        }
+
+        /* ===== MODALS ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            opacity: 1;
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--n-border);
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: auto;
+            padding: 36px;
+            position: relative;
+            box-shadow: 8px 8px 0px var(--n-shadow-bg);
+            animation: modalSlideUp 0.3s ease;
+        }
+
+        @keyframes modalSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 1rem;
+            width: 38px;
+            height: 38px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            border-color: var(--n-border);
+            color: var(--text-primary);
+            background: var(--charcoal);
+        }
+
+        .modal-image {
+            width: 100%;
+            border: 2px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 4px;
+        }
+
+        .stats-modal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin-top: 20px;
+        }
+
+        .stats-card {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            padding: 18px;
+            transition: border-color 0.2s;
+        }
+
+        .stats-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .stats-card .stat-label {
+            margin-bottom: 6px;
+        }
+
+        .stats-card .stat-value {
+            font-size: 1.3rem;
+        }
+
+        /* About */
+        .about-content h3 {
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .about-content h3:first-child {
+            margin-top: 0;
+        }
+
+        .about-content p {
+            color: var(--text-secondary);
+            margin-bottom: 14px;
+            line-height: 1.7;
+            font-size: 0.88rem;
+        }
+
+        .about-content ul {
+            margin-left: 20px;
+            margin-bottom: 14px;
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .about-content li {
+            margin-bottom: 6px;
+        }
+
+        .about-content code {
+            background: var(--charcoal);
+            border: 1px solid var(--border-color);
+            padding: 2px 7px;
+            font-family: var(--font-mono);
+            font-size: 0.82em;
+            color: var(--pure-white);
+        }
+
+        .about-content pre {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 18px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        .about-content pre code {
+            background: transparent;
+            border: none;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Upload */
+        .upload-zone {
+            margin-top: 20px;
+            padding: 50px 40px;
+            border: 2px dashed var(--border-color);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--text-primary);
+            background: var(--charcoal);
+        }
+
+        .upload-zone .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+        }
+
+        .upload-zone p {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .upload-zone .formats {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Health */
+        .health-content {
+            text-align: center;
+        }
+
+        .health-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .health-stats {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            padding: 14px 18px;
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        .health-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .health-row+.health-row {
+            border-top: 1px solid var(--border-color);
+        }
+
+        .health-row-label {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .health-row-value {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            border: 2px solid var(--text-primary);
+            padding: 14px 28px;
+            font-family: var(--font-heading);
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 2000;
+            box-shadow: 4px 4px 0px var(--n-shadow-bg);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            border-top: 2px solid var(--border-color);
+            margin-top: 40px;
+        }
+
+        footer p {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        footer a:hover {
+            color: var(--pure-white);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 16px;
+            }
+
+            header {
+                top: 0;
+                width: 100%;
+                padding: 0;
+            }
+
+            .nav-shadow {
+                display: none;
+            }
+
+            .header-inner {
+                border: none;
+                border-bottom: 2px solid var(--n-border);
+                padding: 0 16px;
+                min-height: 48px;
+            }
+
+            .nav-center {
+                display: none;
+            }
+
+            .logo-text {
+                font-size: 1rem;
+            }
+
+            .nav-cta {
+                padding: 6px 14px;
+                font-size: 0.65rem;
+            }
+
+            .nav-cta-shadow {
+                display: none;
+            }
+
+            .app {
+                padding-top: 56px;
+            }
+
+            .hero {
+                padding: 60px 0 40px;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .search-container {
+                flex-direction: column;
+            }
+
+            .search-btn {
+                width: 100%;
+                border-left: none;
+                border-top: 2px solid var(--border-color);
+            }
+
+            .features {
+                gap: 8px;
+            }
+
+            .feature-pill {
+                font-size: 0.65rem;
+                padding: 8px 14px;
+            }
+
+            .filters-panel {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stats-bar {
+                flex-wrap: wrap;
+                gap: 24px;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-modal-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-box {
+                padding: 24px;
+                margin: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Noise overlay - matches portfolio -->
+    <div class="noise-overlay"></div>
+
+    <div class="app">
+        <!-- Header -->
+        <header>
+            <div class="nav-wrapper">
+                <div class="nav-shadow"></div>
+                <div class="header-inner">
+                    <a href="/" class="logo">
+                        <span class="logo-text">[GetIt]</span>
+                    </a>
+                    <div class="nav-center">
+                        <a class="nav-link active" onclick="return false;" href="#">Home</a>
+                        <a class="nav-link" onclick="showUpload(); return false;" href="#">Upload</a>
+                        <a class="nav-link" onclick="showStats(); return false;" href="#">Stats</a>
+                        <a class="nav-link" onclick="checkHealth(); return false;" href="#">Health</a>
+                        <a class="nav-link" onclick="showAbout(); return false;" href="#">About</a>
+                    </div>
+                    <div class="nav-right">
+                        <button class="theme-toggle-simple" id="themeToggle" onclick="toggleTheme()"
+                            title="Toggle theme">
+                            <svg id="themeIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                        </button>
+                        <div class="nav-cta-wrap">
+                            <a class="nav-cta" onclick="triggerBuild(); return false;" href="#">Build Index</a>
+                            <div class="nav-cta-shadow"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="container">
+            <!-- Hero -->
+            <section class="hero">
+                <div class="hero-badge">
+                    <span class="hero-badge-dot"></span>
+                    Offline &middot; Private &middot; Local
+                </div>
+
+                <h1>
+                    Find Any Image
+                    <span class="line-2">with natural language</span>
+                </h1>
+
+                <p class="hero-sub">
+                    Just type what you're looking for — our AI sees your images the way you do, combining visual
+                    intelligence with semantic understanding.
+                </p>
+
+                <!-- Search -->
+                <div class="search-wrapper">
+                    <div class="search-container">
+                        <input type="text" id="searchInput" class="search-input"
+                            placeholder="Describe what you're looking for..." autofocus>
+                        <button class="search-btn" id="searchBtn" onclick="performSearch()">Search</button>
+                    </div>
+
+                    <div class="filters-toggle" id="filtersToggle" onclick="toggleFilters()">
+                        ⚙ Advanced Options ▾
+                    </div>
+
+                    <div id="filtersPanel" class="filters-panel">
+                        <div class="filter-group">
+                            <label class="filter-label">Results</label>
+                            <input type="number" id="topK" class="filter-input" value="12" min="1" max="50">
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">Min Score</label>
+                            <input type="number" id="minScore" class="filter-input" value="0" min="0" max="1"
+                                step="0.1">
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">CLIP Weight</label>
+                            <input type="number" id="clipWeight" class="filter-input" value="0.8" min="0" max="1"
+                                step="0.1">
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">Keyword Wt</label>
+                            <input type="number" id="keywordWeight" class="filter-input" value="0.2" min="0" max="1"
+                                step="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature Pills -->
+                <div class="features">
+                    <div class="feature-pill"><span class="icon">🧠</span> CLIP + BLIP</div>
+                    <div class="feature-pill"><span class="icon">🔒</span> Privacy-First</div>
+                    <div class="feature-pill"><span class="icon">⚡</span> Instant Search</div>
+                    <div class="feature-pill"><span class="icon">📸</span> Auto Captioning</div>
+                </div>
+            </section>
+
+            <!-- Stats Bar -->
+            <div id="statsBar" class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-label">Query</div>
+                    <div class="stat-value" id="queryText">—</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Results</div>
+                    <div class="stat-value" id="resultCount">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Time</div>
+                    <div class="stat-value" id="searchTime">0s</div>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loadingIndicator" class="loading-state">
+                <div class="loader"></div>
+                <p>Searching through your images...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state">
+                <div class="empty-icon">◎</div>
+                <h2>Start Exploring</h2>
+                <p>Enter a natural language query to discover your images</p>
+            </div>
+
+            <!-- Results Grid -->
+            <div id="resultsGrid" class="results-grid"></div>
+        </main>
+
+        <footer>
+            <div class="container">
+                <p>Built by <a href="https://prafull-harer.vercel.app/" target="_blank">Prafull Harer</a></p>
+                <p style="margin-top: 8px;">Powered by
+                    <a href="https://huggingface.co/Salesforce/blip-image-captioning-large" target="_blank">BLIP</a>
+                    &middot;
+                    <a href="https://huggingface.co/openai/clip-vit-base-patch32" target="_blank">CLIP</a> &middot;
+                    <a href="https://fastapi.tiangolo.com" target="_blank">FastAPI</a> &middot;
+                    <a href="https://huggingface.co" target="_blank">HuggingFace</a>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Image Detail Modal -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal('modal')">×</button>
+            <img id="modalImage" class="modal-image" src="" alt="">
+            <h3 id="modalCaption" class="modal-title"></h3>
+            <div id="modalKeywords" class="card-keywords" style="margin: 12px 0;"></div>
+            <div id="modalScores" class="card-scores"></div>
+            <div id="modalMetadata"
+                style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); font-size: 0.82rem; color: var(--text-secondary);">
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 520px;">
+            <button class="modal-close" onclick="closeModal('uploadModal')">×</button>
+            <h3 class="modal-title" style="margin-bottom: 6px;">Upload Images</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 8px;">Add new images to your search
+                index</p>
+            <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">↑</div>
+                <p><strong>Click to upload</strong> or drag and drop</p>
+                <p class="formats">JPG &middot; PNG &middot; WEBP &middot; GIF</p>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" multiple onchange="uploadImage()">
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="statsModal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 520px;">
+            <button class="modal-close" onclick="closeModal('statsModal')">×</button>
+            <h3 class="modal-title" style="margin-bottom: 20px;">Dataset Statistics</h3>
+            <div id="statsContent" class="stats-modal-grid"></div>
+        </div>
+    </div>
+
+    <!-- Health Modal -->
+    <div id="healthModal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 420px;">
+            <button class="modal-close" onclick="closeModal('healthModal')">×</button>
+            <div class="health-content">
+                <h3 class="modal-title" style="margin-bottom: 20px;">System Health</h3>
+                <div id="healthStatusIcon" class="health-icon">⚡</div>
+                <h2 id="healthStatusText" style="margin-bottom: 6px;">Checking...</h2>
+                <p id="healthStatusDetail" style="color: var(--text-muted); margin-bottom: 16px;"></p>
+                <div class="health-stats">
+                    <div class="health-row">
+                        <span class="health-row-label">Latency</span>
+                        <span class="health-row-value" id="healthLatency">—</span>
+                    </div>
+                    <div class="health-row">
+                        <span class="health-row-label">Status</span>
+                        <span class="health-row-value" id="healthCode">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="modal-overlay">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal('aboutModal')">×</button>
+            <div class="about-content">
+                <h3>GetIt — Local Multimodal Semantic Search Engine</h3>
+                <p>A privacy-first, offline-capable semantic image search engine. Search your local image library using
+                    natural language, powered by hybrid AI combining visual understanding (CLIP) and semantic captions
+                    (BLIP).</p>
+
+                <h3>Features</h3>
+                <ul>
+                    <li><strong>Hybrid Search:</strong> Combines visual embeddings (CLIP) with generated captions
+                        (BLIP).</li>
+                    <li><strong>Smart Keyword Cleaning:</strong> Automated noise reduction for accurate matching.</li>
+                    <li><strong>100% Offline:</strong> No cloud, no API keys — your data stays local.</li>
+                    <li><strong>Auto Indexing:</strong> Captions & embeddings generated automatically.</li>
+                </ul>
+
+                <h3>Tech Stack</h3>
+                <ul>
+                    <li><strong>Backend:</strong> Python, FastAPI, PyTorch</li>
+                    <li><strong>AI Models:</strong> OpenAI CLIP, Salesforce BLIP</li>
+                    <li><strong>Frontend:</strong> Vanilla HTML / JS / CSS</li>
+                    <li><strong>Storage:</strong> JSON-based index (portable & simple)</li>
+                </ul>
+
+                <p
+                    style="font-family: var(--font-mono); font-size: 0.68rem; margin-top: 40px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em;">
+                    v2.0.0 &middot; Local Deployment &middot; Built with ❤️
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // ===== CORE STATE =====
+        let currentResults = [];
+
+        // ===== THEME TOGGLE =====
+        function initTheme() {
+            const saved = localStorage.getItem('theme');
+            const theme = saved || 'dark';
+            applyTheme(theme);
+        }
+
+        function applyTheme(theme) {
+            const html = document.documentElement;
+            html.classList.remove('dark', 'light');
+            html.classList.add(theme);
+            const icon = document.getElementById('themeIcon');
+            if (icon) {
+                if (theme === 'dark') {
+                    // Moon icon
+                    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />';
+                } else {
+                    // Sun icon
+                    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />';
+                }
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.classList.contains('light') ? 'light' : 'dark';
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        }
+
+        // Apply theme immediately
+        initTheme();
+
+        // ===== EVENT LISTENERS =====
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+
+        // ===== SEARCH =====
+        function toggleFilters() {
+            const panel = document.getElementById('filtersPanel');
+            panel.classList.toggle('active');
+        }
+
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                showToast('Enter a search query');
+                return;
+            }
+
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('resultsGrid').classList.remove('visible');
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('statsBar').classList.remove('visible');
+
+            try {
+                const topK = document.getElementById('topK').value;
+                const minScore = document.getElementById('minScore').value;
+                const clipWeight = document.getElementById('clipWeight').value;
+                const kwWeight = document.getElementById('keywordWeight').value;
+
+                const params = new URLSearchParams({
+                    query, top_k: topK, min_score: minScore,
+                    clip_weight: clipWeight, keyword_weight: kwWeight
+                });
+
+                const response = await fetch(`/api/search?${params}`);
+                if (!response.ok) throw new Error('Search failed');
+
+                const data = await response.json();
+                currentResults = data.results;
+                displayResults(data);
+            } catch (error) {
+                console.error('Search error:', error);
+                showToast('Search failed. Is the server running?');
+                document.getElementById('emptyState').style.display = 'block';
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            const grid = document.getElementById('resultsGrid');
+            grid.innerHTML = '';
+
+            if (data.results.length === 0) {
+                document.getElementById('emptyState').innerHTML = `
+                    <div class="empty-icon">○</div>
+                    <h2>No Results Found</h2>
+                    <p>Try a different query or adjust the filters</p>
+                `;
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('statsBar').classList.add('visible');
+            document.getElementById('queryText').textContent = data.query;
+            document.getElementById('resultCount').textContent = data.total_results;
+            document.getElementById('searchTime').textContent = data.search_time.toFixed(2) + 's';
+
+            grid.classList.add('visible');
+            data.results.forEach((result, i) => {
+                const card = document.createElement('div');
+                card.className = 'n-card-container';
+                card.style.animation = `fadeInUp 0.4s ease ${i * 0.05}s both`;
+                card.onclick = () => showDetail(result);
+
+                const keywords = result.keywords.slice(0, 4).map(k =>
+                    `<span class="keyword-tag">${k}</span>`
+                ).join('');
+
+                card.innerHTML = `
+                    <div class="n-card">
+                        <div class="card-image-wrapper">
+                            <img
+                                src="/api/image/${result.filename}?thumbnail=true"
+                                alt="${result.caption}"
+                                class="card-image"
+                                loading="lazy"
+                            >
+                        </div>
+                        <div class="card-body">
+                            <div class="card-caption">${result.caption}</div>
+                            <div class="card-keywords">${keywords}</div>
+                            <div class="card-scores">
+                                <div class="score-item">
+                                    <span class="score-label">CLIP</span>
+                                    <span class="score-value">${result.clip_score.toFixed(3)}</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="score-label">Keywords</span>
+                                    <span class="score-value">${result.keyword_score.toFixed(3)}</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="score-label">Final</span>
+                                    <span class="score-value">${result.final_score.toFixed(3)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="n-shadow"></div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // ===== IMAGE DETAIL MODAL =====
+        function showDetail(result) {
+            document.getElementById('modal').classList.add('active');
+            document.getElementById('modalImage').src = `/api/image/${result.filename}`;
+            document.getElementById('modalCaption').textContent = result.caption;
+
+            const keywordsHtml = result.keywords.map(k => `<span class="keyword-tag">${k}</span>`).join('');
+            document.getElementById('modalKeywords').innerHTML = keywordsHtml;
+
+            document.getElementById('modalScores').innerHTML = `
+                <div class="score-item"><span class="score-label">CLIP Score</span><span class="score-value">${result.clip_score.toFixed(3)}</span></div>
+                <div class="score-item"><span class="score-label">Keyword Score</span><span class="score-value">${result.keyword_score.toFixed(3)}</span></div>
+                <div class="score-item"><span class="score-label">Final Score</span><span class="score-value">${result.final_score.toFixed(3)}</span></div>
+            `;
+
+            if (result.metadata) {
+                const meta = result.metadata;
+                document.getElementById('modalMetadata').innerHTML = `
+                    <p><strong>Dimensions:</strong> ${meta.width || 'N/A'} × ${meta.height || 'N/A'}</p>
+                    <p><strong>Size:</strong> ${formatBytes(meta.size_bytes || 0)}</p>
+                    <p><strong>Format:</strong> ${meta.format || 'N/A'}</p>
+                    <p><strong>Filename:</strong> ${result.filename}</p>
+                `;
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // ===== UPLOAD =====
+        function showUpload() {
+            document.getElementById('uploadModal').classList.add('active');
+        }
+
+        async function uploadImage() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+            if (files.length === 0) return;
+
+            showToast(`Uploading ${files.length} image${files.length > 1 ? 's' : ''}...`);
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const response = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (!response.ok) throw new Error('Upload failed');
+                const data = await response.json();
+                showToast(`✓ ${data.count} images saved — click Build Index to process`);
+                closeModal('uploadModal');
+                fileInput.value = '';
+            } catch (error) {
+                console.error('Upload error:', error);
+                showToast('Upload failed');
+            }
+        }
+
+        // ===== BUILD INDEX =====
+        async function triggerBuild() {
+            if (!confirm("Start building index for new images? This runs in the background.")) return;
+
+            showToast("Build started in background...");
+            try {
+                const res = await fetch('/api/build', { method: 'POST' });
+                const data = await res.json();
+                console.log(data);
+                showToast("Build running — check stats shortly");
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to start build");
+            }
+        }
+
+        // ===== STATS =====
+        async function showStats() {
+            document.getElementById('statsModal').classList.add('active');
+            const container = document.getElementById('statsContent');
+            container.innerHTML = '<div class="loader" style="margin:20px auto;"></div>';
+
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                container.innerHTML = `
+                    <div class="stats-card">
+                        <div class="stat-label">Total Images</div>
+                        <div class="stat-value">${data.total_images}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Total Keywords</div>
+                        <div class="stat-value">${data.total_keywords}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Unique Keywords</div>
+                        <div class="stat-value">${data.unique_keywords}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stat-label">Device</div>
+                        <div class="stat-value" style="font-size:0.9rem;">${data.model_info.device}</div>
+                    </div>
+                    <div class="stats-card" style="grid-column: span 2;">
+                        <div class="stat-label">Models</div>
+                        <div style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-secondary); margin-top:6px; line-height:1.6;">
+                            ${data.model_info.blip_model}<br>
+                            ${data.model_info.clip_model}
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">Failed to load stats.</p>';
+            }
+        }
+
+        // ===== HEALTH CHECK =====
+        async function checkHealth() {
+            document.getElementById('healthModal').classList.add('active');
+            const icon = document.getElementById('healthStatusIcon');
+            const text = document.getElementById('healthStatusText');
+            const detail = document.getElementById('healthStatusDetail');
+
+            icon.innerHTML = '⚡';
+            text.innerText = 'Checking...';
+
+            const start = Date.now();
+            try {
+                const response = await fetch('/api/stats');
+                const latency = Date.now() - start;
+
+                if (response.ok) {
+                    icon.innerHTML = '🟢';
+                    text.innerText = 'System Online';
+                    detail.innerText = 'All services operational';
+                    document.getElementById('healthLatency').innerText = latency + 'ms';
+                    document.getElementById('healthCode').innerText = response.status + ' OK';
+                } else {
+                    throw new Error('Non-200 response');
+                }
+            } catch (e) {
+                icon.innerHTML = '🔴';
+                text.innerText = 'System Offline';
+                detail.innerText = 'Cannot reach API backend';
+                document.getElementById('healthLatency').innerText = 'TIMEOUT';
+                document.getElementById('healthCode').innerText = 'ERR';
+            }
+        }
+
+        // ===== ABOUT =====
+        function showAbout() {
+            document.getElementById('aboutModal').classList.add('active');
+        }
+
+        // ===== UTILITIES =====
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        window.onclick = (event) => {
+            if (event.target.classList.contains('modal-overlay')) {
+                event.target.classList.remove('active');
+            }
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+            }
+        });
+    </script>
+</body>
+
+</html>
