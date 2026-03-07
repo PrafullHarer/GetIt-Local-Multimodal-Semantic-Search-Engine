@@ -210,6 +210,7 @@ Combining both improves accuracy for ambiguous or abstract queries.
 
 * Built with **FastAPI**
 * Powered by **HuggingFace Transformers**
+* Prafull Harer
 
 ---
 
